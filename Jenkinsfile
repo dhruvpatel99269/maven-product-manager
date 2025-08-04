@@ -1,16 +1,13 @@
 pipeline {
     agent any
 
-    environment {
-        // Define Maven tool if configured in Jenkins Global Tools
-        MAVEN_HOME = tool 'Maven3' // Ensure this matches your Jenkins tool name
-        PATH = "${env.MAVEN_HOME}/bin:${env.PATH}"
+    tools {
+        maven 'Maven3'  // Must match your Jenkins Maven installation name
     }
 
     stages {
         stage('Checkout') {
             steps {
-                // Clones your repository
                 checkout scm
             }
         }
