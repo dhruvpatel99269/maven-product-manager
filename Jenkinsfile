@@ -93,11 +93,11 @@ pipeline {
         stage('Deploy Application') {
             steps {
                 echo 'Deploying the application...'
-                // Pull the newly pushed image from Docker Hub to the target host and run it.
-                // This command assumes you're running it on a Docker host.
-                // It also maps the container's port 8080 to the host's port 8080.
-                bat "docker run -d --name=${IMAGE_NAME} -p 8080:8080 ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG}"
-                echo 'Deployment successful!'
+                bat """
+                docker stop maven-retail-app || true
+                docker rm maven-retail-app || true
+                docker run -d --name=maven-retail-app -p 8080:8080 dhruv99269/maven-retail-app:latest
+                """
             }
         }
 
