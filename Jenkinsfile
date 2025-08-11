@@ -96,7 +96,7 @@ pipeline {
                 bat """
                 docker stop maven-retail-app || true
                 docker rm maven-retail-app || true
-                docker run -d --name=maven-retail-app -p 8080:8080 dhruv99269/maven-retail-app:latest
+                docker run -d --name=maven-retail-app -p 8082:8082 dhruv99269/maven-retail-app:latest
                 """
             }
         }
