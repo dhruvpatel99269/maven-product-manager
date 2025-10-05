@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongo-config
+  namespace: retail
+data:
+  init-mongo.js: |
+    // Initialize the retail database
+    db = db.getSiblingDB('retaildb');
+    
+    // Create a user for the retail application
+    db.createUser({
+      user: 'retailuser',
+      pwd: 'retailpass123',
+      roles: [
+        {
+          role: 'readWrite',
+          db: 'retaildb'
+        }
+      ]
+    });
+    
+    // Create collections and insert sample data
+    db.products.insertMany([
+      {
+        _id: ObjectId(),
+        name: 'Laptop',
+        price: 999.99,
+        category: 'Electronics',
+        description: 'High-performance laptop for business use',
+        stock: 50,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        _id: ObjectId(),
+        name: 'Smartphone',
+        price: 699.99,
+        category: 'Electronics',
+        description: 'Latest smartphone with advanced features',
+        stock: 100,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        _id: ObjectId(),
+        name: 'Office Chair',
+        price: 299.99,
+        category: 'Furniture',
+        description: 'Ergonomic office chair for comfortable work',
+        stock: 25,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    ]);
+    
+    print('Database initialized successfully!');
