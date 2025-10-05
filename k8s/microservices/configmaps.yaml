@@ -1,0 +1,74 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: product-service-config
+  namespace: microservices
+data:
+  mongodb.uri: "mongodb://product-mongodb:27017"
+  mongodb.database: "productdb"
+  server.port: "8081"
+  spring.application.name: "product-service"
+  management.endpoints.web.exposure.include: "health,info,metrics"
+  management.endpoint.health.show-details: "always"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-service-config
+  namespace: microservices
+data:
+  mongodb.uri: "mongodb://user-mongodb:27017"
+  mongodb.database: "userdb"
+  server.port: "8082"
+  spring.application.name: "user-service"
+  management.endpoints.web.exposure.include: "health,info,metrics"
+  management.endpoint.health.show-details: "always"
+  jwt.expiration: "86400000"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: order-service-config
+  namespace: microservices
+data:
+  mongodb.uri: "mongodb://order-mongodb:27017"
+  mongodb.database: "orderdb"
+  server.port: "8083"
+  spring.application.name: "order-service"
+  management.endpoints.web.exposure.include: "health,info,metrics"
+  management.endpoint.health.show-details: "always"
+  product.service.url: "http://product-service:8081"
+  payment.service.url: "http://payment-service:8084"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: payment-service-config
+  namespace: microservices
+data:
+  mongodb.uri: "mongodb://payment-mongodb:27017"
+  mongodb.database: "paymentdb"
+  server.port: "8084"
+  spring.application.name: "payment-service"
+  management.endpoints.web.exposure.include: "health,info,metrics"
+  management.endpoint.health.show-details: "always"
+  stripe.public.key: "pk_test_your_stripe_public_key"
+  paypal.mode: "sandbox"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-gateway-config
+  namespace: microservices
+data:
+  server.port: "8080"
+  spring.application.name: "api-gateway"
+  management.endpoints.web.exposure.include: "health,info,metrics"
+  management.endpoint.health.show-details: "always"
+  product.service.url: "http://product-service:8081"
+  user.service.url: "http://user-service:8082"
+  order.service.url: "http://order-service:8083"
+  payment.service.url: "http://payment-service:8084"
+  cors.allowed.origins: "*"
+  cors.allowed.methods: "GET,POST,PUT,DELETE,OPTIONS"
+  cors.allowed.headers: "*"

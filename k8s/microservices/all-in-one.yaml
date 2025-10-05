@@ -1,0 +1,1060 @@
+# Complete Microservices Deployment - All in One
+# This file contains all resources needed to deploy the microservices architecture
+
+---
+# Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: microservices
+  labels:
+    name: microservices
+    environment: production
+
+---
+# Secrets
+apiVersion: v1
+kind: Secret
+metadata:
+  name: product-service-secret
+  namespace: microservices
+type: Opaque
+data:
+  mongodb.username: cHJvZHVjdF91c2Vy
+  mongodb.password: cHJvZHVjdF9wYXNzd29yZDEyMw==
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: user-service-secret
+  namespace: microservices
+type: Opaque
+data:
+  mongodb.username: dXNlcl91c2Vy
+  mongodb.password: dXNlcl9wYXNzd29yZDEyMw==
+  jwt.secret: bXlKd3RTZWNyZXRLZXlGb3JVc2VyU2VydmljZTEyMzQ1Njc4OTA=
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: order-service-secret
+  namespace: microservices
+type: Opaque
+data:
+  mongodb.username: b3JkZXJfdXNlcg==
+  mongodb.password: b3JkZXJfcGFzc3dvcmQxMjM=
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: payment-service-secret
+  namespace: microservices
+type: Opaque
+data:
+  mongodb.username: cGF5bWVudF91c2Vy
+  mongodb.password: cGF5bWVudF9wYXNzd29yZDEyMw==
+  stripe.secret.key: c2tfdGVzdF95b3VyX3N0cmlwZV9zZWNyZXRfa2V5
+  paypal.client.id: eW91cl9wYXlwYWxfY2xpZW50X2lk
+  paypal.client.secret: eW91cl9wYXlwYWxfY2xpZW50X3NlY3JldA==
+
+---
+# ConfigMaps
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: product-service-config
+  namespace: microservices
+data:
+  mongodb.uri: "mongodb://product-mongodb:27017"
+  mongodb.database: "productdb"
+  server.port: "8081"
+  spring.application.name: "product-service"
+  management.endpoints.web.exposure.include: "health,info,metrics"
+  management.endpoint.health.show-details: "always"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-service-config
+  namespace: microservices
+data:
+  mongodb.uri: "mongodb://user-mongodb:27017"
+  mongodb.database: "userdb"
+  server.port: "8082"
+  spring.application.name: "user-service"
+  management.endpoints.web.exposure.include: "health,info,metrics"
+  management.endpoint.health.show-details: "always"
+  jwt.expiration: "86400000"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: order-service-config
+  namespace: microservices
+data:
+  mongodb.uri: "mongodb://order-mongodb:27017"
+  mongodb.database: "orderdb"
+  server.port: "8083"
+  spring.application.name: "order-service"
+  management.endpoints.web.exposure.include: "health,info,metrics"
+  management.endpoint.health.show-details: "always"
+  product.service.url: "http://product-service:8081"
+  payment.service.url: "http://payment-service:8084"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: payment-service-config
+  namespace: microservices
+data:
+  mongodb.uri: "mongodb://payment-mongodb:27017"
+  mongodb.database: "paymentdb"
+  server.port: "8084"
+  spring.application.name: "payment-service"
+  management.endpoints.web.exposure.include: "health,info,metrics"
+  management.endpoint.health.show-details: "always"
+  stripe.public.key: "pk_test_your_stripe_public_key"
+  paypal.mode: "sandbox"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-gateway-config
+  namespace: microservices
+data:
+  server.port: "8080"
+  spring.application.name: "api-gateway"
+  management.endpoints.web.exposure.include: "health,info,metrics"
+  management.endpoint.health.show-details: "always"
+  product.service.url: "http://product-service:8081"
+  user.service.url: "http://user-service:8082"
+  order.service.url: "http://order-service:8083"
+  payment.service.url: "http://payment-service:8084"
+  cors.allowed.origins: "*"
+  cors.allowed.methods: "GET,POST,PUT,DELETE,OPTIONS"
+  cors.allowed.headers: "*"
+
+---
+# Persistent Volume Claims
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: product-mongodb-pvc
+  namespace: microservices
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: user-mongodb-pvc
+  namespace: microservices
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: order-mongodb-pvc
+  namespace: microservices
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: payment-mongodb-pvc
+  namespace: microservices
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+# MongoDB Deployments and Services
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-mongodb
+  namespace: microservices
+  labels:
+    app: product-mongodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: product-mongodb
+  template:
+    metadata:
+      labels:
+        app: product-mongodb
+    spec:
+      containers:
+      - name: mongodb
+        image: mongo:7.0
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: product-service-secret
+              key: mongodb.username
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: product-service-secret
+              key: mongodb.password
+        - name: MONGO_INITDB_DATABASE
+          value: "productdb"
+        volumeMounts:
+        - name: product-mongodb-storage
+          mountPath: /data/db
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      volumes:
+      - name: product-mongodb-storage
+        persistentVolumeClaim:
+          claimName: product-mongodb-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-mongodb
+  namespace: microservices
+  labels:
+    app: product-mongodb
+spec:
+  selector:
+    app: product-mongodb
+  ports:
+  - port: 27017
+    targetPort: 27017
+    protocol: TCP
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-mongodb
+  namespace: microservices
+  labels:
+    app: user-mongodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-mongodb
+  template:
+    metadata:
+      labels:
+        app: user-mongodb
+    spec:
+      containers:
+      - name: mongodb
+        image: mongo:7.0
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: user-service-secret
+              key: mongodb.username
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: user-service-secret
+              key: mongodb.password
+        - name: MONGO_INITDB_DATABASE
+          value: "userdb"
+        volumeMounts:
+        - name: user-mongodb-storage
+          mountPath: /data/db
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      volumes:
+      - name: user-mongodb-storage
+        persistentVolumeClaim:
+          claimName: user-mongodb-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-mongodb
+  namespace: microservices
+  labels:
+    app: user-mongodb
+spec:
+  selector:
+    app: user-mongodb
+  ports:
+  - port: 27017
+    targetPort: 27017
+    protocol: TCP
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-mongodb
+  namespace: microservices
+  labels:
+    app: order-mongodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-mongodb
+  template:
+    metadata:
+      labels:
+        app: order-mongodb
+    spec:
+      containers:
+      - name: mongodb
+        image: mongo:7.0
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: order-service-secret
+              key: mongodb.username
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: order-service-secret
+              key: mongodb.password
+        - name: MONGO_INITDB_DATABASE
+          value: "orderdb"
+        volumeMounts:
+        - name: order-mongodb-storage
+          mountPath: /data/db
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      volumes:
+      - name: order-mongodb-storage
+        persistentVolumeClaim:
+          claimName: order-mongodb-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-mongodb
+  namespace: microservices
+  labels:
+    app: order-mongodb
+spec:
+  selector:
+    app: order-mongodb
+  ports:
+  - port: 27017
+    targetPort: 27017
+    protocol: TCP
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-mongodb
+  namespace: microservices
+  labels:
+    app: payment-mongodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment-mongodb
+  template:
+    metadata:
+      labels:
+        app: payment-mongodb
+    spec:
+      containers:
+      - name: mongodb
+        image: mongo:7.0
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: payment-service-secret
+              key: mongodb.username
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: payment-service-secret
+              key: mongodb.password
+        - name: MONGO_INITDB_DATABASE
+          value: "paymentdb"
+        volumeMounts:
+        - name: payment-mongodb-storage
+          mountPath: /data/db
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      volumes:
+      - name: payment-mongodb-storage
+        persistentVolumeClaim:
+          claimName: payment-mongodb-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-mongodb
+  namespace: microservices
+  labels:
+    app: payment-mongodb
+spec:
+  selector:
+    app: payment-mongodb
+  ports:
+  - port: 27017
+    targetPort: 27017
+    protocol: TCP
+  type: ClusterIP
+
+---
+# Microservices Deployments and Services
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-service
+  namespace: microservices
+  labels:
+    app: product-service
+    version: v1
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: product-service
+  template:
+    metadata:
+      labels:
+        app: product-service
+        version: v1
+    spec:
+      containers:
+      - name: product-service
+        image: product-service:latest
+        ports:
+        - containerPort: 8081
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "kubernetes"
+        - name: MONGODB_URI
+          valueFrom:
+            configMapKeyRef:
+              name: product-service-config
+              key: mongodb.uri
+        - name: MONGODB_DATABASE
+          valueFrom:
+            configMapKeyRef:
+              name: product-service-config
+              key: mongodb.database
+        - name: MONGODB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: product-service-secret
+              key: mongodb.username
+        - name: MONGODB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: product-service-secret
+              key: mongodb.password
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8081
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8081
+          initialDelaySeconds: 30
+          periodSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-service
+  namespace: microservices
+  labels:
+    app: product-service
+spec:
+  selector:
+    app: product-service
+  ports:
+  - port: 8081
+    targetPort: 8081
+    protocol: TCP
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+  namespace: microservices
+  labels:
+    app: user-service
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: user-service
+  template:
+    metadata:
+      labels:
+        app: user-service
+        version: v1
+    spec:
+      containers:
+      - name: user-service
+        image: user-service:latest
+        ports:
+        - containerPort: 8082
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "kubernetes"
+        - name: MONGODB_URI
+          valueFrom:
+            configMapKeyRef:
+              name: user-service-config
+              key: mongodb.uri
+        - name: MONGODB_DATABASE
+          valueFrom:
+            configMapKeyRef:
+              name: user-service-config
+              key: mongodb.database
+        - name: MONGODB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: user-service-secret
+              key: mongodb.username
+        - name: MONGODB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: user-service-secret
+              key: mongodb.password
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: user-service-secret
+              key: jwt.secret
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8082
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8082
+          initialDelaySeconds: 30
+          periodSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+  namespace: microservices
+  labels:
+    app: user-service
+spec:
+  selector:
+    app: user-service
+  ports:
+  - port: 8082
+    targetPort: 8082
+    protocol: TCP
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  namespace: microservices
+  labels:
+    app: order-service
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+        version: v1
+    spec:
+      containers:
+      - name: order-service
+        image: order-service:latest
+        ports:
+        - containerPort: 8083
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "kubernetes"
+        - name: MONGODB_URI
+          valueFrom:
+            configMapKeyRef:
+              name: order-service-config
+              key: mongodb.uri
+        - name: MONGODB_DATABASE
+          valueFrom:
+            configMapKeyRef:
+              name: order-service-config
+              key: mongodb.database
+        - name: MONGODB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: order-service-secret
+              key: mongodb.username
+        - name: MONGODB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: order-service-secret
+              key: mongodb.password
+        - name: PRODUCT_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: order-service-config
+              key: product.service.url
+        - name: PAYMENT_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: order-service-config
+              key: payment.service.url
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8083
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8083
+          initialDelaySeconds: 30
+          periodSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+  namespace: microservices
+  labels:
+    app: order-service
+spec:
+  selector:
+    app: order-service
+  ports:
+  - port: 8083
+    targetPort: 8083
+    protocol: TCP
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+  namespace: microservices
+  labels:
+    app: payment-service
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payment-service
+  template:
+    metadata:
+      labels:
+        app: payment-service
+        version: v1
+    spec:
+      containers:
+      - name: payment-service
+        image: payment-service:latest
+        ports:
+        - containerPort: 8084
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "kubernetes"
+        - name: MONGODB_URI
+          valueFrom:
+            configMapKeyRef:
+              name: payment-service-config
+              key: mongodb.uri
+        - name: MONGODB_DATABASE
+          valueFrom:
+            configMapKeyRef:
+              name: payment-service-config
+              key: mongodb.database
+        - name: MONGODB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: payment-service-secret
+              key: mongodb.username
+        - name: MONGODB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: payment-service-secret
+              key: mongodb.password
+        - name: STRIPE_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: payment-service-secret
+              key: stripe.secret.key
+        - name: PAYPAL_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: payment-service-secret
+              key: paypal.client.id
+        - name: PAYPAL_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: payment-service-secret
+              key: paypal.client.secret
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8084
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8084
+          initialDelaySeconds: 30
+          periodSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service
+  namespace: microservices
+  labels:
+    app: payment-service
+spec:
+  selector:
+    app: payment-service
+  ports:
+  - port: 8084
+    targetPort: 8084
+    protocol: TCP
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: microservices
+  labels:
+    app: api-gateway
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+        version: v1
+    spec:
+      containers:
+      - name: api-gateway
+        image: api-gateway:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "kubernetes"
+        - name: PRODUCT_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: api-gateway-config
+              key: product.service.url
+        - name: USER_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: api-gateway-config
+              key: user.service.url
+        - name: ORDER_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: api-gateway-config
+              key: order.service.url
+        - name: PAYMENT_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: api-gateway-config
+              key: payment.service.url
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway
+  namespace: microservices
+  labels:
+    app: api-gateway
+spec:
+  selector:
+    app: api-gateway
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+  type: LoadBalancer
+
+---
+# Horizontal Pod Autoscalers
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: product-service-hpa
+  namespace: microservices
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: product-service
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: user-service-hpa
+  namespace: microservices
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: user-service
+  minReplicas: 2
+  maxReplicas: 8
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: order-service-hpa
+  namespace: microservices
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: order-service
+  minReplicas: 2
+  maxReplicas: 8
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: payment-service-hpa
+  namespace: microservices
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: payment-service
+  minReplicas: 2
+  maxReplicas: 8
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: api-gateway-hpa
+  namespace: microservices
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: api-gateway
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80

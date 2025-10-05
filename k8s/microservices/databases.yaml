@@ -1,0 +1,315 @@
+# Product Service MongoDB
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-mongodb
+  namespace: microservices
+  labels:
+    app: product-mongodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: product-mongodb
+  template:
+    metadata:
+      labels:
+        app: product-mongodb
+    spec:
+      containers:
+      - name: mongodb
+        image: mongo:7.0
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: product-service-secret
+              key: mongodb.username
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: product-service-secret
+              key: mongodb.password
+        - name: MONGO_INITDB_DATABASE
+          value: "productdb"
+        volumeMounts:
+        - name: product-mongodb-storage
+          mountPath: /data/db
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      volumes:
+      - name: product-mongodb-storage
+        persistentVolumeClaim:
+          claimName: product-mongodb-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-mongodb
+  namespace: microservices
+  labels:
+    app: product-mongodb
+spec:
+  selector:
+    app: product-mongodb
+  ports:
+  - port: 27017
+    targetPort: 27017
+    protocol: TCP
+  type: ClusterIP
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: product-mongodb-pvc
+  namespace: microservices
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+# User Service MongoDB
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-mongodb
+  namespace: microservices
+  labels:
+    app: user-mongodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-mongodb
+  template:
+    metadata:
+      labels:
+        app: user-mongodb
+    spec:
+      containers:
+      - name: mongodb
+        image: mongo:7.0
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: user-service-secret
+              key: mongodb.username
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: user-service-secret
+              key: mongodb.password
+        - name: MONGO_INITDB_DATABASE
+          value: "userdb"
+        volumeMounts:
+        - name: user-mongodb-storage
+          mountPath: /data/db
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      volumes:
+      - name: user-mongodb-storage
+        persistentVolumeClaim:
+          claimName: user-mongodb-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-mongodb
+  namespace: microservices
+  labels:
+    app: user-mongodb
+spec:
+  selector:
+    app: user-mongodb
+  ports:
+  - port: 27017
+    targetPort: 27017
+    protocol: TCP
+  type: ClusterIP
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: user-mongodb-pvc
+  namespace: microservices
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+# Order Service MongoDB
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-mongodb
+  namespace: microservices
+  labels:
+    app: order-mongodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-mongodb
+  template:
+    metadata:
+      labels:
+        app: order-mongodb
+    spec:
+      containers:
+      - name: mongodb
+        image: mongo:7.0
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: order-service-secret
+              key: mongodb.username
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: order-service-secret
+              key: mongodb.password
+        - name: MONGO_INITDB_DATABASE
+          value: "orderdb"
+        volumeMounts:
+        - name: order-mongodb-storage
+          mountPath: /data/db
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      volumes:
+      - name: order-mongodb-storage
+        persistentVolumeClaim:
+          claimName: order-mongodb-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-mongodb
+  namespace: microservices
+  labels:
+    app: order-mongodb
+spec:
+  selector:
+    app: order-mongodb
+  ports:
+  - port: 27017
+    targetPort: 27017
+    protocol: TCP
+  type: ClusterIP
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: order-mongodb-pvc
+  namespace: microservices
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+# Payment Service MongoDB
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-mongodb
+  namespace: microservices
+  labels:
+    app: payment-mongodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment-mongodb
+  template:
+    metadata:
+      labels:
+        app: payment-mongodb
+    spec:
+      containers:
+      - name: mongodb
+        image: mongo:7.0
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: payment-service-secret
+              key: mongodb.username
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: payment-service-secret
+              key: mongodb.password
+        - name: MONGO_INITDB_DATABASE
+          value: "paymentdb"
+        volumeMounts:
+        - name: payment-mongodb-storage
+          mountPath: /data/db
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      volumes:
+      - name: payment-mongodb-storage
+        persistentVolumeClaim:
+          claimName: payment-mongodb-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-mongodb
+  namespace: microservices
+  labels:
+    app: payment-mongodb
+spec:
+  selector:
+    app: payment-mongodb
+  ports:
+  - port: 27017
+    targetPort: 27017
+    protocol: TCP
+  type: ClusterIP
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: payment-mongodb-pvc
+  namespace: microservices
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi

@@ -1,0 +1,195 @@
+version: '3.8'
+
+services:
+  # Product Service
+  product-service:
+    build:
+      context: .
+      dockerfile: docker/product-service/Dockerfile
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - MONGODB_URI=mongodb://product-mongodb:27017
+      - MONGODB_DATABASE=productdb
+      - MONGODB_USERNAME=product_user
+      - MONGODB_PASSWORD=product_password123
+    depends_on:
+      - product-mongodb
+    networks:
+      - microservices-network
+
+  # User Service
+  user-service:
+    build:
+      context: .
+      dockerfile: docker/user-service/Dockerfile
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - MONGODB_URI=mongodb://user-mongodb:27017
+      - MONGODB_DATABASE=userdb
+      - MONGODB_USERNAME=user_user
+      - MONGODB_PASSWORD=user_password123
+      - JWT_SECRET=myJwtSecretKeyForUserService1234567890
+    depends_on:
+      - user-mongodb
+    networks:
+      - microservices-network
+
+  # Order Service
+  order-service:
+    build:
+      context: .
+      dockerfile: docker/order-service/Dockerfile
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - MONGODB_URI=mongodb://order-mongodb:27017
+      - MONGODB_DATABASE=orderdb
+      - MONGODB_USERNAME=order_user
+      - MONGODB_PASSWORD=order_password123
+      - PRODUCT_SERVICE_URL=http://product-service:8081
+      - PAYMENT_SERVICE_URL=http://payment-service:8084
+    depends_on:
+      - order-mongodb
+      - product-service
+      - payment-service
+    networks:
+      - microservices-network
+
+  # Payment Service
+  payment-service:
+    build:
+      context: .
+      dockerfile: docker/payment-service/Dockerfile
+    ports:
+      - "8084:8084"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - MONGODB_URI=mongodb://payment-mongodb:27017
+      - MONGODB_DATABASE=paymentdb
+      - MONGODB_USERNAME=payment_user
+      - MONGODB_PASSWORD=payment_password123
+      - STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
+      - PAYPAL_CLIENT_ID=your_paypal_client_id
+      - PAYPAL_CLIENT_SECRET=your_paypal_client_secret
+    depends_on:
+      - payment-mongodb
+    networks:
+      - microservices-network
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: .
+      dockerfile: docker/api-gateway/Dockerfile
+    ports:
+      - "8086:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - PRODUCT_SERVICE_URL=http://product-service:8081
+      - USER_SERVICE_URL=http://user-service:8082
+      - ORDER_SERVICE_URL=http://order-service:8083
+      - PAYMENT_SERVICE_URL=http://payment-service:8084
+    depends_on:
+      - product-service
+      - user-service
+      - order-service
+      - payment-service
+    networks:
+      - microservices-network
+
+  # Product Service MongoDB
+  product-mongodb:
+    image: mongo:7.0
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=product_user
+      - MONGO_INITDB_ROOT_PASSWORD=product_password123
+      - MONGO_INITDB_DATABASE=productdb
+    volumes:
+      - product-mongodb-data:/data/db
+    networks:
+      - microservices-network
+
+  # User Service MongoDB
+  user-mongodb:
+    image: mongo:7.0
+    ports:
+      - "27018:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=user_user
+      - MONGO_INITDB_ROOT_PASSWORD=user_password123
+      - MONGO_INITDB_DATABASE=userdb
+    volumes:
+      - user-mongodb-data:/data/db
+    networks:
+      - microservices-network
+
+  # Order Service MongoDB
+  order-mongodb:
+    image: mongo:7.0
+    ports:
+      - "27019:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=order_user
+      - MONGO_INITDB_ROOT_PASSWORD=order_password123
+      - MONGO_INITDB_DATABASE=orderdb
+    volumes:
+      - order-mongodb-data:/data/db
+    networks:
+      - microservices-network
+
+  # Payment Service MongoDB
+  payment-mongodb:
+    image: mongo:7.0
+    ports:
+      - "27020:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=payment_user
+      - MONGO_INITDB_ROOT_PASSWORD=payment_password123
+      - MONGO_INITDB_DATABASE=paymentdb
+    volumes:
+      - payment-mongodb-data:/data/db
+    networks:
+      - microservices-network
+
+  # Redis for caching (optional)
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - microservices-network
+
+  # MongoDB Express for database management
+  mongo-express:
+    image: mongo-express:1.0.0
+    ports:
+      - "8085:8081"
+    environment:
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=product_user
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=product_password123
+      - ME_CONFIG_MONGODB_SERVER=product-mongodb
+      - ME_CONFIG_MONGODB_PORT=27017
+    depends_on:
+      - product-mongodb
+    networks:
+      - microservices-network
+
+volumes:
+  product-mongodb-data:
+  user-mongodb-data:
+  order-mongodb-data:
+  payment-mongodb-data:
+  redis-data:
+
+networks:
+  microservices-network:
+    driver: bridge
